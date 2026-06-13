@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths: ['**.nix', '.github/**']
+  pull_request:
+    branches: [main]
+    paths: ['**.nix', '.github/**']
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - name: Flake check (lightweight)
+        run: nix flake show
+      - name: Flake check (module validation)
+        if: github.event_name == 'pull_request'
+        run: nix flake check --impure
+        env:
+          NIXPKGS_ALLOW_UNFREE: 1

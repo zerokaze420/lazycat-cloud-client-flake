@@ -28,6 +28,26 @@ nix shell github:zerokaze420/lazycat-cloud-client-flake --impure
 
 ---
 
+## Installation Comparison
+
+| Feature | NixOS Module | Home Manager Module |
+|---------|-------------|---------------------|
+| Scope | System-wide (all users) | Per-user (current user) |
+| Network management (VPN/proxy) | ✅ Full support | ❌ Not supported |
+| CAP_NET_ADMIN capability | ✅ Auto-configured setuid wrapper | ❌ Cannot manage |
+| Polkit policy | ✅ Auto-installed | ❌ Not involved |
+| DBus registration | ✅ Auto-registered | ❌ Not involved |
+| AppArmor support | ✅ Optional unconfined profile | ❌ Not involved |
+| Desktop entry | ✅ System-level `.desktop` | ✅ User-level `.desktop` |
+| Auto-start on login | ❌ Manual configuration needed | ✅ `autoStart` option |
+| Use case | Multi-user desktop / full functionality | Personal desktop / pair with NixOS module |
+
+> **Recommendation**: On NixOS, **use both modules together** — the NixOS module handles system-level permissions, while the Home Manager module manages user-level desktop integration and auto-start. Non-NixOS systems can only use the Home Manager module (network management will be limited).
+>
+> **Why can't Home Manager support CAP_NET_ADMIN?** Granting Linux capabilities requires modifying file extended attributes (`setcap`), which must be executed by root, and the Nix Store is a read-only file system. Home Manager operates at user-level privileges and cannot bypass these constraints. `security.wrappers` is a NixOS system-level mechanism that delegates permission via setuid wrappers in `/run/wrappers/bin/` — this can only be implemented at the NixOS configuration level.
+
+---
+
 ## Usage
 
 ### NixOS Module
@@ -116,8 +136,7 @@ The module will:
 - Add a `.desktop` entry under `~/.local/share/applications/`
 - Optionally register a systemd user service for auto-start
 
-> **Note** The Home Manager module does **not** handle `CAP_NET_ADMIN` capabilities.  
-> For full functionality, pair it with the [NixOS module](#nixos-module) on NixOS systems.
+> **Note** The Home Manager module does **not** handle `CAP_NET_ADMIN` capabilities. See [Installation Comparison](#installation-comparison) for details.
 
 ### Overlay
 
@@ -179,6 +198,59 @@ NIXPKGS_ALLOW_UNFREE=1 nix run github:zerokaze420/lazycat-cloud-client-flake --i
 |-------------|--------|
 | `x86_64-linux` | Supported |
 | `aarch64-linux` | Not yet (upstream does not provide arm64 builds) |
+
+---
+
+## Developer Guide
+
+### Project Structure
+
+```
+├── flake.nix            # Flake entrypoint, defines inputs/outputs
+├── default.nix          # Package derivation (download → unpack → patch → install)
+├── nixos-module.nix     # NixOS system-level module
+├── hm-module.nix        # Home Manager user-level module
+└── .github/
+    └── workflows/
+        └── ci.yml       # CI pipeline
+```
+
+### Updating the Version
+
+When a new version is released, modify two fields in `default.nix`:
+
+1. `version` — update the version string
+2. `hash` — update the SRI hash (use `lib.fakeHash` as a placeholder, let Nix error with the correct value, then replace)
+
+```bash
+# Get the new version hash
+nix-prefetch-url --unpack https://dl.lazycat.cloud/client/desktop/stable/lzc-client-desktop_v{VERSION}.tar.zst
+```
+
+### Local Testing
+
+```bash
+# Quick evaluation check
+nix flake show
+
+# Build the package (requires unfree)
+nix build --impure
+
+# Run the client
+nix run . --impure
+
+# Verify module option definitions
+nix eval .#nixosModules.default
+```
+
+### CI Pipeline
+
+Triggered on push/PR to `main` (only when `.nix` files change):
+
+| Stage | Trigger | Description |
+|-------|---------|-------------|
+| `nix flake show` | push & PR | Lightweight flake evaluation, completes in seconds |
+| `nix flake check --impure` | PR only | Module option type validation |
 
 ---
 
