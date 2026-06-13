@@ -22,17 +22,17 @@ in
       pkgs.zenity
     ];
 
-    xdg.desktopEntries.lzc-client = {
-      name = "懒猫微服";
-      exec = "${cfg.package}/bin/lzc-client-desktop";
-      icon = "${cfg.package}/share/icons/hicolor/256x256/apps/lzc-client.png";
-      categories = [ "Network" ];
-      mimeType = [ "x-scheme-handler/lzc" ];
-      startupWMClass = "lzc-client-desktop";
-      settings = {
-        Keywords = "lazycat;lzc;";
+      xdg.desktopEntries.lzc-client = {
+        name = "懒猫微服";
+        exec = "${cfg.package}/bin/lzc-client-desktop";
+        icon = "${cfg.package}/share/icons/hicolor/256x256/apps/lzc-client.png";
+        categories = [ "Network" ];
+        mimeType = [ "x-scheme-handler/lzc" ];
+        settings = {
+          Keywords = "lazycat;lzc;";
+          StartupWMClass = "lzc-client-desktop";
+        };
       };
-    };
 
     systemd.user.services.lzc-client-desktop = lib.mkIf cfg.autoStart {
       Unit = {
