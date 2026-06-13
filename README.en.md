@@ -258,6 +258,19 @@ Triggered on push/PR to `main` (only when `.nix` files change):
 | `nix flake show` | push & PR | Lightweight flake evaluation, completes in seconds |
 | `nix flake check --impure` | PR only | Module option type validation |
 
+### CAP_NET_ADMIN Implementation
+
+The Nix Store is a read-only filesystem, so `setcap` cannot be used directly. This flake works around the limitation via the following mechanisms:
+
+| Mechanism | Purpose | File |
+|-----------|---------|------|
+| `security.wrappers` | Creates a setuid wrapper (`/run/wrappers/bin/lzc-core`) that grants `CAP_NET_ADMIN` at runtime | `nixos-module.nix` |
+| `lzc-core` script | The real binary is renamed to `.lzc-core-wrapped`; a same-named script routes calls to the setuid wrapper | `default.nix` |
+| Fake `getcap` | The app checks capabilities via `getcap` on startup; a fake `getcap` always returns `cap_net_admin=ep`, bypassing the read-only limitation | `default.nix` |
+| Fake `setcap` | `linux_setcap.sh` always returns 0; polkit policy is set to `yes` to skip password prompts | `default.nix` |
+
+**Call chain**: App → `lzc-core` (script) → `/run/wrappers/bin/lzc-core` (setuid + CAP) → `.lzc-core-wrapped` (real binary)
+
 ---
 
 ## License

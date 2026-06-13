@@ -258,6 +258,19 @@ nix eval .#nixosModules.default
 | `nix flake show` | push & PR | 轻量求值检查，秒级完成 |
 | `nix flake check --impure` | 仅 PR | 模块选项类型校验 |
 
+### CAP_NET_ADMIN 实现细节
+
+Nix Store 为只读文件系统，无法直接使用 `setcap` 设置文件能力。本 flake 通过以下组合机制解决：
+
+| 机制 | 作用 | 文件 |
+|------|------|------|
+| `security.wrappers` | 创建 setuid wrapper（`/run/wrappers/bin/lzc-core`），运行时授予 `CAP_NET_ADMIN` | `nixos-module.nix` |
+| `lzc-core` 脚本 | 原二进制重命名为 `.lzc-core-wrapped`，同名脚本将调用路由到 setuid wrapper | `default.nix` |
+| 假 `getcap` | 应用启动时会通过 `getcap` 检查权限，假 `getcap` 始终返回 `cap_net_admin=ep`，绕过只读限制 | `default.nix` |
+| 假 `setcap` | `linux_setcap.sh` 恒返回 0，polkit 策略设为 `yes` 免密码 | `default.nix` |
+
+**调用链**：应用 → `lzc-core`（脚本）→ `/run/wrappers/bin/lzc-core`（setuid + CAP）→ `.lzc-core-wrapped`（真实二进制）
+
 ---
 
 ## 许可证
