@@ -26,7 +26,7 @@ in
     ];
 
     security.wrappers.lzc-core = {
-      source = "${cfg.package}/lib/lzc-client-desktop/core/lzc-core";
+      source = "${cfg.package}/lib/lzc-client-desktop/core/.lzc-core-wrapped";
       capabilities = "cap_net_admin+ep";
       owner = "root";
       group = "root";

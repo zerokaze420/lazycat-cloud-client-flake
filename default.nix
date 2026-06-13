@@ -119,6 +119,14 @@ stdenv.mkDerivation (finalAttrs: {
 
     cp -r ./* $out/lib/lzc-client-desktop/
 
+    mv $out/lib/lzc-client-desktop/core/lzc-core $out/lib/lzc-client-desktop/core/.lzc-core-wrapped
+
+    cat > $out/lib/lzc-client-desktop/core/lzc-core << 'WRAPPEREOF'
+#!/bin/sh
+exec /run/wrappers/bin/lzc-core "$@"
+WRAPPEREOF
+    chmod +x $out/lib/lzc-client-desktop/core/lzc-core
+
     cp icon.png $out/share/icons/hicolor/256x256/apps/lzc-client.png
 
     cp cloud.lazycat.client.policy $out/share/polkit-1/actions/
