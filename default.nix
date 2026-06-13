@@ -105,6 +105,8 @@ stdenv.mkDerivation (finalAttrs: {
   postPatch = ''
     substituteInPlace cloud.lazycat.client.policy \
       --replace-fail "__SETCAP_SCRIPT_PATH__" "$out/lib/lzc-client-desktop/core/linux_setcap.sh"
+    substituteInPlace cloud.lazycat.client.policy \
+      --replace-fail "auth_admin" "yes"
   '';
 
   installPhase = ''
