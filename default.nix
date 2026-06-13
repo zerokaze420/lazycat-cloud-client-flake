@@ -56,6 +56,10 @@ stdenv.mkDerivation (finalAttrs: {
     zstd
   ];
 
+  autoPatchelfIgnoreMissingDeps = [
+    "libc.musl-x86_64.so.1"
+  ];
+
   buildInputs = [
     stdenv.cc.cc.lib
     alsa-lib
