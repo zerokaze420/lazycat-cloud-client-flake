@@ -67,6 +67,9 @@ System-level installation with capability management and optional AppArmor suppo
       modules = [
         lazycat-cloud-client.nixosModules.default
         ({ config, ... }: {
+          nixpkgs.overlays = [
+            lazycat-cloud-client.overlays.default  # required: makes package available in pkgs
+          ];
           services.lazycat-cloud-client = {
             enable = true;
             enableAppArmor = true;      # optional: unconfined AppArmor policy
@@ -111,6 +114,9 @@ Per-user installation with desktop integration and auto-start.
       modules = [
         lazycat-cloud-client.homeManagerModules.default
         ({ config, ... }: {
+          nixpkgs.overlays = [
+            lazycat-cloud-client.overlays.default  # required: makes package available in pkgs
+          ];
           programs.lazycat-cloud-client = {
             enable = true;
             autoStart = true;           # start on login

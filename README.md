@@ -67,6 +67,9 @@ nix shell github:zerokaze420/lazycat-cloud-client-flake --impure
       modules = [
         lazycat-cloud-client.nixosModules.default
         ({ config, ... }: {
+          nixpkgs.overlays = [
+            lazycat-cloud-client.overlays.default  # 必需：使包在 pkgs 中可用
+          ];
           services.lazycat-cloud-client = {
             enable = true;
             enableAppArmor = true;      # 可选：宽松 AppArmor 策略
@@ -111,6 +114,9 @@ nix shell github:zerokaze420/lazycat-cloud-client-flake --impure
       modules = [
         lazycat-cloud-client.homeManagerModules.default
         ({ config, ... }: {
+          nixpkgs.overlays = [
+            lazycat-cloud-client.overlays.default  # 必需：使包在 pkgs 中可用
+          ];
           programs.lazycat-cloud-client = {
             enable = true;
             autoStart = true;           # 开机自启
