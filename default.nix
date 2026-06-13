@@ -137,9 +137,23 @@ exit 0
 SETCAPEOF
     chmod +x $out/lib/lzc-client-desktop/core/linux_setcap.sh
 
+    mkdir -p $out/lib/lzc-client-desktop/fake/bin
+    cat > $out/lib/lzc-client-desktop/fake/bin/getcap << 'GETCAPEOF'
+#!/bin/sh
+for p in "$@"; do
+  case "$p" in
+    *lzc-core*)
+      printf '%s cap_net_admin=ep\n' "$p"
+      ;;
+  esac
+done
+GETCAPEOF
+    chmod +x $out/lib/lzc-client-desktop/fake/bin/getcap
+
     makeWrapper $out/lib/lzc-client-desktop/lzc-client-desktop $out/bin/lzc-client-desktop \
       --chdir "$out/lib/lzc-client-desktop" \
-      --prefix PATH : ${lib.makeBinPath [ zstd ]}
+      --prefix PATH : ${lib.makeBinPath [ zstd ]} \
+      --prefix PATH : $out/lib/lzc-client-desktop/fake/bin
 
     runHook postInstall
   '';
