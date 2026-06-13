@@ -1,4 +1,4 @@
-# 懒猫微服 / LazyCat Cloud Client
+# 懒猫微服 / LazyCat Cloud Client — Nix Flake
 
 [![Nix Flake Check](https://img.shields.io/badge/flake-check-passing-brightgreen)](./flake.nix)
 [![License](https://img.shields.io/badge/license-unfree-red)](./default.nix)
