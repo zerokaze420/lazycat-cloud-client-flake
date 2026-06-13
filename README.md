@@ -1,38 +1,38 @@
-# LazyCat Cloud Client
+# 懒猫微服 / LazyCat Cloud Client
 
 [![Nix Flake Check](https://img.shields.io/badge/flake-check-passing-brightgreen)](./flake.nix)
 [![License](https://img.shields.io/badge/license-unfree-red)](./default.nix)
 [![Platform](https://img.shields.io/badge/platform-x86__64--linux-blue)](./default.nix)
 
-Nix flake for the [LazyCat Cloud](https://lazycat.cloud) desktop client — a micro-server platform for personal cloud services.
+[懒猫微服](https://lazycat.cloud) 桌面客户端的 Nix flake — 个人云服务微服务器平台。
 
-[中文](./README.zh.md)
+[English](./README.en.md)
 
 ---
 
-## Quick Start
+## 快速开始
 
 ```bash
-# Run directly (one-off)
+# 直接运行（一次性）
 nix run github:zerokaze420/lazycat-cloud-client-flake --impure
 
-# Install to profile
+# 安装到 profile
 nix profile install github:zerokaze420/lazycat-cloud-client-flake --impure
 
-# Try in temporary shell
+# 临时 shell 中试用
 nix shell github:zerokaze420/lazycat-cloud-client-flake --impure
 ```
 
-> **Note** `--impure` is required because this package has an `unfree` license.  
-> See [Unfree Packages](#unfree-packages) for permanent configuration.
+> **注意** 由于此包使用 `unfree` 许可证，需要 `--impure` 参数。  
+> 永久配置方法见 [非自由软件](#非自由软件)。
 
 ---
 
-## Usage
+## 用法
 
-### NixOS Module
+### NixOS 模块
 
-System-level installation with capability management and optional AppArmor support.
+系统级安装，包含权限管理和可选的 AppArmor 支持。
 
 ```nix
 # flake.nix
@@ -49,8 +49,8 @@ System-level installation with capability management and optional AppArmor suppo
         ({ config, ... }: {
           services.lazycat-cloud-client = {
             enable = true;
-            enableAppArmor = true;      # optional: unconfined AppArmor policy
-            # package = pkgs.lazycat-cloud-client;  # default, can override
+            enableAppArmor = true;      # 可选：宽松 AppArmor 策略
+            # package = pkgs.lazycat-cloud-client;  # 默认值，可覆写
           };
         })
       ];
@@ -59,23 +59,23 @@ System-level installation with capability management and optional AppArmor suppo
 }
 ```
 
-**Options:**
+**选项：**
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `services.lazycat-cloud-client.enable` | `bool` | `false` | Enable the module |
-| `services.lazycat-cloud-client.package` | `package` | `pkgs.lazycat-cloud-client` | Override the package |
-| `services.lazycat-cloud-client.enableAppArmor` | `bool` | `false` | Unconfined AppArmor profile |
+| 选项 | 类型 | 默认 | 说明 |
+|------|------|------|------|
+| `services.lazycat-cloud-client.enable` | `bool` | `false` | 启用模块 |
+| `services.lazycat-cloud-client.package` | `package` | `pkgs.lazycat-cloud-client` | 覆写包 |
+| `services.lazycat-cloud-client.enableAppArmor` | `bool` | `false` | 宽松 AppArmor 策略 |
 
-The module automatically:
-- Installs the client and `zenity` (GUI dialog dependency)
-- Grants `CAP_NET_ADMIN` to `lzc-core` via `security.wrappers`
-- Installs the polkit policy for network management
-- Optionally adds an unconfined AppArmor profile
+模块会自动：
+- 安装客户端和 `zenity`（GUI 弹窗依赖）
+- 通过 `security.wrappers` 授予 `lzc-core` 的 `CAP_NET_ADMIN` 权限
+- 安装网络管理的 polkit 策略
+- （可选）添加宽松的 AppArmor 策略
 
-### Home Manager Module
+### Home Manager 模块
 
-Per-user installation with desktop integration and auto-start.
+用户级安装，包含桌面集成和开机自启。
 
 ```nix
 # flake.nix
@@ -93,7 +93,7 @@ Per-user installation with desktop integration and auto-start.
         ({ config, ... }: {
           programs.lazycat-cloud-client = {
             enable = true;
-            autoStart = true;           # start on login
+            autoStart = true;           # 开机自启
             # package = pkgs.lazycat-cloud-client;
           };
         })
@@ -103,25 +103,25 @@ Per-user installation with desktop integration and auto-start.
 }
 ```
 
-**Options:**
+**选项：**
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `programs.lazycat-cloud-client.enable` | `bool` | `false` | Enable the module |
-| `programs.lazycat-cloud-client.package` | `package` | `pkgs.lazycat-cloud-client` | Override the package |
-| `programs.lazycat-cloud-client.autoStart` | `bool` | `false` | Auto-start on login |
+| 选项 | 类型 | 默认 | 说明 |
+|------|------|------|------|
+| `programs.lazycat-cloud-client.enable` | `bool` | `false` | 启用模块 |
+| `programs.lazycat-cloud-client.package` | `package` | `pkgs.lazycat-cloud-client` | 覆写包 |
+| `programs.lazycat-cloud-client.autoStart` | `bool` | `false` | 登录后自动启动 |
 
-The module will:
-- Install the client and `zenity` into your user profile
-- Add a `.desktop` entry under `~/.local/share/applications/`
-- Optionally register a systemd user service for auto-start
+模块会：
+- 安装客户端和 `zenity` 到你的用户环境
+- 在 `~/.local/share/applications/` 下创建 `.desktop` 入口
+- （可选）注册 systemd 用户服务实现开机自启
 
-> **Note** The Home Manager module does **not** handle `CAP_NET_ADMIN` capabilities.  
-> For full functionality, pair it with the [NixOS module](#nixos-module) on NixOS systems.
+> **注意** Home Manager 模块**不处理** `CAP_NET_ADMIN` 权限。  
+> 在 NixOS 上请搭配 [NixOS 模块](#nixos-模块) 以获得完整功能。
 
 ### Overlay
 
-Add the package to your `pkgs` scope.
+将包加入你的 `pkgs` 作用域。
 
 ```nix
 {
@@ -131,11 +131,11 @@ Add the package to your `pkgs` scope.
 }
 ```
 
-Then reference it as `pkgs.lazycat-cloud-client`.
+之后可通过 `pkgs.lazycat-cloud-client` 引用。
 
-### Classic nix-build
+### 传统 nix-build
 
-Without flakes:
+不使用 flake 的情况：
 
 ```bash
 git clone https://github.com/zerokaze420/lazycat-cloud-client-flake
@@ -145,11 +145,11 @@ NIXPKGS_ALLOW_UNFREE=1 nix-build -E 'with import <nixpkgs> {}; callPackage ./def
 
 ---
 
-## Unfree Packages
+## 非自由软件
 
-This package has an `unfree` license. To allow it permanently:
+此包使用 `unfree` 许可证。永久允许的方法：
 
-**NixOS / nixos-rebuild:** add to `configuration.nix`
+**NixOS / nixos-rebuild：** 在 `configuration.nix` 中添加
 
 ```nix
 { nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
@@ -158,14 +158,14 @@ This package has an `unfree` license. To allow it permanently:
 }
 ```
 
-**Flake users (nix profile / nix shell / nix run):**
+**Flake 用户（nix profile / nix shell / nix run）：**
 
 ```nix
-# Add to ~/.config/nixpkgs/config.nix
+# 添加到 ~/.config/nixpkgs/config.nix
 { allowUnfree = true; }
 ```
 
-Or pass `--impure` with the environment variable set:
+或带环境变量传递 `--impure`：
 
 ```bash
 NIXPKGS_ALLOW_UNFREE=1 nix run github:zerokaze420/lazycat-cloud-client-flake --impure
@@ -173,16 +173,16 @@ NIXPKGS_ALLOW_UNFREE=1 nix run github:zerokaze420/lazycat-cloud-client-flake --i
 
 ---
 
-## Architecture
+## 架构
 
-| Architecture | Status |
-|-------------|--------|
-| `x86_64-linux` | Supported |
-| `aarch64-linux` | Not yet (upstream does not provide arm64 builds) |
+| 架构 | 状态 |
+|------|------|
+| `x86_64-linux` | 支持 |
+| `aarch64-linux` | 暂不支持（上游未提供 arm64 构建） |
 
 ---
 
-## License
+## 许可证
 
-The Nix derivation ([`default.nix`](./default.nix)) is MIT-licensed.  
-The packaged software is proprietary — see [lazycat.cloud](https://lazycat.cloud) for terms.
+Nix derivation（[`default.nix`](./default.nix)）采用 MIT 许可证。  
+打包的软件本身为专有软件，详见 [lazycat.cloud](https://lazycat.cloud)。
