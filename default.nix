@@ -5,7 +5,9 @@
 , makeWrapper
 , makeDesktopItem
 , copyDesktopItems
+, patchelf
 , zstd
+, zlib
 , alsa-lib
 , at-spi2-atk
 , cairo
@@ -19,6 +21,7 @@
 , gtk3
 , libGL
 , libdrm
+, libglvnd
 , libnotify
 , libxkbcommon
 , mesa
@@ -27,6 +30,7 @@
 , pango
 , pipewire
 , systemd
+, wayland
 , libx11
 , libxcomposite
 , libxcursor
@@ -150,10 +154,93 @@ done
 GETCAPEOF
     chmod +x $out/lib/lzc-client-desktop/fake/bin/getcap
 
+    cat > $out/bin/lzc-patch-catlink << 'PATCHCATLINKEOF'
+#!/bin/sh
+set -u
+
+quiet=0
+watch=0
+for arg in "$@"; do
+  case "$arg" in
+    --quiet) quiet=1 ;;
+    --watch) watch=1 ;;
+  esac
+done
+
+log() {
+  if [ "$quiet" -eq 0 ]; then
+    printf '%s\n' "$*" >&2
+  fi
+}
+
+patch_one() {
+  bin="$1"
+  [ -f "$bin" ] || return 0
+  [ -w "$bin" ] || return 0
+
+  root="$(dirname "$bin")"
+  lib_root="$root/lib"
+  stamp="$root/.nix-patched-catlink"
+  target_interp="@glibc@/lib/ld-linux-x86-64.so.2"
+  target_rpath="$lib_root:$lib_root/lib:@glibc@/lib:@zlib@/lib:@wayland@/lib:@libxcb@/lib:@libxkbcommon@/lib:@libglvnd@/lib"
+
+  interp="$(@patchelf@/bin/patchelf --print-interpreter "$bin" 2>/dev/null || true)"
+
+  if [ "$interp" = "$target_interp" ] \
+    && [ -f "$stamp" ] \
+    && [ "$(cat "$stamp" 2>/dev/null || true)" = "$target_rpath" ]; then
+    return 0
+  fi
+
+  if @patchelf@/bin/patchelf --set-interpreter "$target_interp" "$bin" \
+    && find "$root" \( -type f -perm -0100 -o -type f -name '*.so*' \) -print \
+      | while IFS= read -r elf; do
+          @patchelf@/bin/patchelf --set-rpath "$target_rpath" "$elf" 2>/dev/null || true
+        done \
+    && printf '%s' "$target_rpath" > "$stamp"; then
+    log "patched catlink: $bin"
+  else
+    log "failed to patch catlink: $bin"
+    return 1
+  fi
+}
+
+scan_once() {
+  status=0
+  for bin in "$HOME"/.local/share/catlink/*/catlink; do
+    [ -e "$bin" ] || continue
+    patch_one "$bin" || status=1
+  done
+  return "$status"
+}
+
+if [ "$watch" -eq 1 ]; then
+  i=0
+  while [ "$i" -lt 600 ]; do
+    scan_once || true
+    sleep 0.5
+    i=$((i + 1))
+  done
+else
+  scan_once
+fi
+PATCHCATLINKEOF
+    substituteInPlace $out/bin/lzc-patch-catlink \
+      --replace-fail "@patchelf@" "${patchelf}" \
+      --replace-fail "@glibc@" "${stdenv.cc.libc}" \
+      --replace-fail "@zlib@" "${zlib}" \
+      --replace-fail "@wayland@" "${wayland}" \
+      --replace-fail "@libxcb@" "${libxcb}" \
+      --replace-fail "@libxkbcommon@" "${libxkbcommon}" \
+      --replace-fail "@libglvnd@" "${libglvnd}"
+    chmod +x $out/bin/lzc-patch-catlink
+
     makeWrapper $out/lib/lzc-client-desktop/lzc-client-desktop $out/bin/lzc-client-desktop \
       --chdir "$out/lib/lzc-client-desktop" \
       --prefix PATH : ${lib.makeBinPath [ zstd ]} \
-      --prefix PATH : $out/lib/lzc-client-desktop/fake/bin
+      --prefix PATH : $out/lib/lzc-client-desktop/fake/bin \
+      --run "$out/bin/lzc-patch-catlink --quiet || true" \
+      --run "$out/bin/lzc-patch-catlink --quiet --watch >/dev/null 2>&1 &"
 
     runHook postInstall
   '';
