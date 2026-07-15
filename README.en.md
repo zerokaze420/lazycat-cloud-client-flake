@@ -37,6 +37,8 @@ nix shell github:zerokaze420/lazycat-cloud-client-flake --impure
 | CAP_NET_ADMIN capability | ✅ Auto-configured setuid wrapper | ❌ Cannot manage |
 | Polkit policy | ✅ Auto-installed | ❌ Not involved |
 | DBus registration | ✅ Auto-registered | ❌ Not involved |
+| GPU acceleration (OpenGL/VA-API/Vulkan) | ✅ Host drivers enabled automatically | ✅ Uses existing host drivers |
+| Desktop notifications | ✅ Supported | ✅ Supported (client must keep running) |
 | AppArmor support | ✅ Optional unconfined profile | ❌ Not involved |
 | Desktop entry | ✅ System-level `.desktop` | ✅ User-level `.desktop` |
 | Auto-start on login | ❌ Manual configuration needed | ✅ `autoStart` option |
@@ -92,6 +94,8 @@ System-level installation with capability management and optional AppArmor suppo
 
 The module automatically:
 - Installs the client and `zenity` (GUI dialog dependency)
+- Enables `hardware.graphics` and uses the host OpenGL, VA-API and Vulkan drivers
+- Installs notification, XDG and Secret Service runtime dependencies for push messages and credential persistence
 - Grants `CAP_NET_ADMIN` to `lzc-core` via `security.wrappers`
 - Installs the polkit policy for network management
 - Optionally adds an unconfined AppArmor profile
@@ -139,6 +143,7 @@ Per-user installation with desktop integration and auto-start.
 
 The module will:
 - Install the client and `zenity` into your user profile
+- Provide the runtime environment required for desktop notifications and GPU acceleration
 - Add a `.desktop` entry under `~/.local/share/applications/`
 - Optionally register a systemd user service for auto-start
 

@@ -37,6 +37,8 @@ nix shell github:zerokaze420/lazycat-cloud-client-flake --impure
 | CAP_NET_ADMIN 权限 | ✅ 自动配置 setuid wrapper | ❌ 无法管理 |
 | Polkit 策略 | ✅ 自动安装 | ❌ 不涉及 |
 | DBus 注册 | ✅ 自动注册 | ❌ 不涉及 |
+| GPU 加速（OpenGL/VA-API/Vulkan） | ✅ 自动启用宿主机驱动 | ✅ 使用已有宿主机驱动 |
+| 桌面消息通知 | ✅ 支持 | ✅ 支持（客户端需保持运行） |
 | AppArmor 支持 | ✅ 可选宽松策略 | ❌ 不涉及 |
 | 桌面入口 | ✅ 系统级 `.desktop` | ✅ 用户级 `.desktop` |
 | 开机自启 | ❌ 需自行配置 | ✅ `autoStart` 选项 |
@@ -106,6 +108,8 @@ lzc-patch-catlink
 
 模块会自动：
 - 安装客户端和 `zenity`（GUI 弹窗依赖）
+- 启用 `hardware.graphics`，并让客户端使用宿主机的 OpenGL、VA-API 和 Vulkan 驱动
+- 安装桌面通知、XDG 和 Secret Service 运行时依赖，用于消息推送与凭据持久化
 - 通过 `security.wrappers` 授予 `lzc-core` 的 `CAP_NET_ADMIN` 权限
 - 安装网络管理的 polkit 策略
 - （可选）添加宽松的 AppArmor 策略
@@ -153,6 +157,7 @@ lzc-patch-catlink
 
 模块会：
 - 安装客户端和 `zenity` 到你的用户环境
+- 提供桌面消息通知及 GPU 加速所需的运行时环境
 - 在 `~/.local/share/applications/` 下创建 `.desktop` 入口
 - （可选）注册 systemd 用户服务实现开机自启
 

@@ -23,6 +23,8 @@
 , libdrm
 , libglvnd
 , libnotify
+, libsecret
+, libva
 , libxkbcommon
 , mesa
 , nspr
@@ -31,6 +33,8 @@
 , pipewire
 , systemd
 , wayland
+, vulkan-loader
+, xdg-utils
 , libx11
 , libxcomposite
 , libxcursor
@@ -80,6 +84,8 @@ stdenv.mkDerivation (finalAttrs: {
     libGL
     libdrm
     libnotify
+    libsecret
+    libva
     libxkbcommon
     mesa
     nspr
@@ -87,6 +93,7 @@ stdenv.mkDerivation (finalAttrs: {
     pango
     pipewire
     systemd
+    vulkan-loader
     libx11
     libxcomposite
     libxcursor
@@ -237,8 +244,13 @@ PATCHCATLINKEOF
 
     makeWrapper $out/lib/lzc-client-desktop/lzc-client-desktop $out/bin/lzc-client-desktop \
       --chdir "$out/lib/lzc-client-desktop" \
-      --prefix PATH : ${lib.makeBinPath [ zstd ]} \
+      --prefix PATH : ${lib.makeBinPath [ libnotify xdg-utils zstd ]} \
       --prefix PATH : $out/lib/lzc-client-desktop/fake/bin \
+      --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ libGL libdrm libglvnd libva mesa vulkan-loader ]} \
+      --prefix LD_LIBRARY_PATH : /run/opengl-driver/lib \
+      --set-default LIBVA_DRIVERS_PATH /run/opengl-driver/lib/dri:${mesa}/lib/dri \
+      --set-default __EGL_VENDOR_LIBRARY_DIRS /run/opengl-driver/share/glvnd/egl_vendor.d:${libglvnd}/share/glvnd/egl_vendor.d \
+      --set-default ELECTRON_OZONE_PLATFORM_HINT auto \
       --run "$out/bin/lzc-patch-catlink --quiet || true" \
       --run "$out/bin/lzc-patch-catlink --quiet --watch >/dev/null 2>&1 &"
 

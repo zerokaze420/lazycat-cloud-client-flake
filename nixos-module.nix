@@ -20,6 +20,11 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    # Exposes the host GPU drivers through /run/opengl-driver.  Binary
+    # Electron/Chromium applications must use the host driver rather than a
+    # Mesa driver captured in the Nix store (especially on NVIDIA systems).
+    hardware.graphics.enable = lib.mkDefault true;
+
     environment.systemPackages = [
       cfg.package
       pkgs.zenity
