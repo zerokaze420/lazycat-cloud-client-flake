@@ -25,13 +25,16 @@
 , libnotify
 , libsecret
 , libva
+, libvdpau
 , libxkbcommon
+, libjack2
 , mesa
 , nspr
 , nss
 , pango
 , pipewire
 , systemd
+, e2fsprogs
 , wayland
 , vulkan-loader
 , xdg-utils
@@ -50,11 +53,11 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "lazycat-cloud-client";
-  version = "2.0.14";
+  version = "2.0.19";
 
   src = fetchurl {
     url = "https://dl.lazycat.cloud/client/desktop/stable/lzc-client-desktop_v${finalAttrs.version}.tar.zst";
-    hash = "sha256-zFTzkELhi5Ux8NYeF4B6hBqxqgNGX7Gn4CMoJ/9NOhA=";
+    hash = "sha256-Au5apvLaqQGpnIGP5G6mexWHNwv+Z4FJqU6cHt+6Pqo=";
   };
 
   nativeBuildInputs = [
@@ -66,6 +69,9 @@ stdenv.mkDerivation (finalAttrs: {
 
   autoPatchelfIgnoreMissingDeps = [
     "libc.musl-x86_64.so.1"
+    # Optional legacy Wayland shell plugin; upstream does not ship the
+    # matching Qt 6.8 private integration library.
+    "libQt6WlShellIntegration.so.6"
   ];
 
   buildInputs = [
@@ -86,13 +92,16 @@ stdenv.mkDerivation (finalAttrs: {
     libnotify
     libsecret
     libva
+    libvdpau
     libxkbcommon
+    libjack2
     mesa
     nspr
     nss
     pango
     pipewire
     systemd
+    e2fsprogs
     vulkan-loader
     libx11
     libxcomposite
