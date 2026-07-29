@@ -255,7 +255,19 @@ PATCHCATLINKEOF
       --chdir "$out/lib/lzc-client-desktop" \
       --prefix PATH : ${lib.makeBinPath [ libnotify xdg-utils zstd ]} \
       --prefix PATH : $out/lib/lzc-client-desktop/fake/bin \
-      --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ libGL libdrm libglvnd libva mesa vulkan-loader ]} \
+      --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [
+        dbus
+        libGL
+        libdrm
+        libglvnd
+        libva
+        libxext
+        libxfixes
+        libxkbcommon
+        libxrandr
+        mesa
+        vulkan-loader
+      ]} \
       --prefix LD_LIBRARY_PATH : /run/opengl-driver/lib \
       --set-default LIBVA_DRIVERS_PATH /run/opengl-driver/lib/dri:${mesa}/lib/dri \
       --set-default __EGL_VENDOR_LIBRARY_DIRS /run/opengl-driver/share/glvnd/egl_vendor.d:${libglvnd}/share/glvnd/egl_vendor.d \
