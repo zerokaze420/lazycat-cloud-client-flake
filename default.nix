@@ -266,6 +266,42 @@ PATCHCATLINKEOF
     runHook postInstall
   '';
 
+  preFixup = ''
+    # autoPatchelf sees the player's bundled libraries and may add that
+    # directory to unrelated executables.  In particular, its older GLib
+    # must not be mixed with nixpkgs' GObject/GIO used by Electron.
+    removePlayerRpath() {
+      local playerLib="$out/lib/lzc-client-desktop/player/lzc-player/usr/lib"
+      find "$out/lib/lzc-client-desktop" -type f -perm -0100 -print0 \
+        | while IFS= read -r -d $'\0' elf; do
+          case "$elf" in
+            "$out/lib/lzc-client-desktop/player/lzc-player/"*) continue ;;
+          esac
+
+          rpath="$(${patchelf}/bin/patchelf --print-rpath "$elf" 2>/dev/null || true)"
+          case ":$rpath:" in
+            *":$playerLib:"*)
+              cleanRpath=""
+              oldIFS="$IFS"
+              IFS=:
+              for path in $rpath; do
+                [ "$path" = "$playerLib" ] && continue
+                if [ -n "$cleanRpath" ]; then
+                  cleanRpath="$cleanRpath:$path"
+                else
+                  cleanRpath="$path"
+                fi
+              done
+              IFS="$oldIFS"
+              ${patchelf}/bin/patchelf --set-rpath "$cleanRpath" "$elf"
+              ;;
+          esac
+        done
+    }
+
+    postFixupHooks+=(removePlayerRpath)
+  '';
+
   desktopItems = [
     (makeDesktopItem {
       name = "lzc-client";
