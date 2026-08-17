@@ -6,6 +6,7 @@
 , makeDesktopItem
 , copyDesktopItems
 , patchelf
+, fuse3
 , zstd
 , zlib
 , alsa-lib
@@ -143,7 +144,10 @@ stdenv.mkDerivation (finalAttrs: {
 
     cat > $out/lib/lzc-client-desktop/core/lzc-core << 'WRAPPEREOF'
 #!/bin/sh
-exec /run/wrappers/bin/lzc-core "$@"
+if [ -x /run/wrappers/bin/lzc-core ]; then
+  exec /run/wrappers/bin/lzc-core "$@"
+fi
+exec "$(dirname "$0")/.lzc-core-wrapped" "$@"
 WRAPPEREOF
     chmod +x $out/lib/lzc-client-desktop/core/lzc-core
 
@@ -253,7 +257,8 @@ PATCHCATLINKEOF
 
     makeWrapper $out/lib/lzc-client-desktop/lzc-client-desktop $out/bin/lzc-client-desktop \
       --chdir "$out/lib/lzc-client-desktop" \
-      --prefix PATH : ${lib.makeBinPath [ libnotify xdg-utils zstd ]} \
+      --prefix PATH : /run/wrappers/bin \
+      --prefix PATH : ${lib.makeBinPath [ fuse3 libnotify xdg-utils zstd ]} \
       --prefix PATH : $out/lib/lzc-client-desktop/fake/bin \
       --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [
         dbus

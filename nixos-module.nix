@@ -25,6 +25,14 @@ in
     # Mesa driver captured in the Nix store (especially on NVIDIA systems).
     hardware.graphics.enable = lib.mkDefault true;
 
+    # The client mounts remote folders through its bundled rclone/FUSE
+    # implementation.  Enable the user mount helpers and allow_other, which
+    # is required when the mounted directory is opened by another process.
+    programs.fuse = {
+      enable = true;
+      userAllowOther = true;
+    };
+
     environment.systemPackages = [
       cfg.package
       pkgs.zenity

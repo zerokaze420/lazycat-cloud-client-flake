@@ -43,6 +43,9 @@ in
 
       Service = {
         ExecStart = "${cfg.package}/bin/lzc-client-desktop";
+        Environment = [
+          "PATH=${cfg.package}/bin:${config.home.profileDirectory}/bin:/run/current-system/sw/bin"
+        ];
         Restart = "on-failure";
         RestartSec = 5;
       };
