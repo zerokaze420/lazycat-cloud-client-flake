@@ -265,6 +265,7 @@ PATCHCATLINKEOF
         libGL
         libdrm
         libglvnd
+        libnotify
         libva
         libxext
         libxfixes
