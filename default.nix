@@ -180,10 +180,12 @@ set -u
 
 quiet=0
 watch=0
+watch_seconds=86400
 for arg in "$@"; do
   case "$arg" in
     --quiet) quiet=1 ;;
     --watch) watch=1 ;;
+    --watch-seconds=*) watch_seconds="''${arg#*=}" ;;
   esac
 done
 
@@ -236,9 +238,9 @@ scan_once() {
 
 if [ "$watch" -eq 1 ]; then
   i=0
-  while [ "$i" -lt 600 ]; do
+  while [ "$i" -lt "$watch_seconds" ]; do
     scan_once || true
-    sleep 0.5
+    sleep 1
     i=$((i + 1))
   done
 else
@@ -279,7 +281,7 @@ PATCHCATLINKEOF
       --set-default __EGL_VENDOR_LIBRARY_DIRS /run/opengl-driver/share/glvnd/egl_vendor.d:${libglvnd}/share/glvnd/egl_vendor.d \
       --set-default ELECTRON_OZONE_PLATFORM_HINT auto \
       --run "$out/bin/lzc-patch-catlink --quiet || true" \
-      --run "$out/bin/lzc-patch-catlink --quiet --watch >/dev/null 2>&1 &"
+      --run "$out/bin/lzc-patch-catlink --quiet --watch --watch-seconds=86400 >/dev/null 2>&1 &"
 
     runHook postInstall
   '';
@@ -317,7 +319,26 @@ PATCHCATLINKEOF
         done
     }
 
+    updateNetDiagnosticManifest() {
+      local nativeDir="$out/lib/lzc-client-desktop/plugin/net-diagnostic/native/linux-x64"
+      local manifest="$nativeDir/build-info.json"
+      local node="$nativeDir/lzc-net-diagnostic.node"
+
+      if [ ! -f "$manifest" ] || [ ! -f "$node" ]; then
+        return 0
+      fi
+
+      local actual recorded
+      actual="$(sha256sum "$node" | cut -d ' ' -f 1)"
+      recorded="$(sed -n '/"name": "lzc-net-diagnostic.node"/,/}/{s/.*"sha256": "\([^"]*\)".*/\1/p}' "$manifest" | head -n1)"
+
+      if [ -n "$recorded" ] && [ "$actual" != "$recorded" ]; then
+        sed -i "/\"name\": \"lzc-net-diagnostic.node\"/,/}/s/\"sha256\": \"$recorded\"/\"sha256\": \"$actual\"/" "$manifest"
+      fi
+    }
+
     postFixupHooks+=(removePlayerRpath)
+    postFixupHooks+=(updateNetDiagnosticManifest)
   '';
 
   desktopItems = [
