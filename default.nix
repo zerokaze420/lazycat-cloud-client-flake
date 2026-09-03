@@ -319,6 +319,38 @@ PATCHCATLINKEOF
         done
     }
 
+    # Electron 43's crashpad handler links GLib directly.  autoPatchelf
+    # may satisfy that NEEDED entry with the player's bundled GLib, which
+    # removePlayerRpath then strips from non-player executables, leaving
+    # chrome_crashpad_handler with no libglib provider and aborting the
+    # app right after startup.  Point such executables at nixpkgs' GLib.
+    ensureGlibRpath() {
+      local glibLib="${lib.getLib glib}/lib"
+      find "$out/lib/lzc-client-desktop" -type f -perm -0100 -print0 \
+        | while IFS= read -r -d $'\0' elf; do
+          case "$elf" in
+            "$out/lib/lzc-client-desktop/player/lzc-player/"*) continue ;;
+          esac
+
+          needed="$(${patchelf}/bin/patchelf --print-needed "$elf" 2>/dev/null || true)"
+          case "$needed" in
+            *libglib-2.0.so.0*)
+              rpath="$(${patchelf}/bin/patchelf --print-rpath "$elf" 2>/dev/null || true)"
+              case ":$rpath:" in
+                *":$glibLib:"*) ;;
+                *)
+                  if [ -n "$rpath" ]; then
+                    ${patchelf}/bin/patchelf --set-rpath "$rpath:$glibLib" "$elf"
+                  else
+                    ${patchelf}/bin/patchelf --set-rpath "$glibLib" "$elf"
+                  fi
+                  ;;
+              esac
+              ;;
+          esac
+        done
+    }
+
     updateNetDiagnosticManifest() {
       local nativeDir="$out/lib/lzc-client-desktop/plugin/net-diagnostic/native/linux-x64"
       local manifest="$nativeDir/build-info.json"
@@ -338,6 +370,7 @@ PATCHCATLINKEOF
     }
 
     postFixupHooks+=(removePlayerRpath)
+    postFixupHooks+=(ensureGlibRpath)
     postFixupHooks+=(updateNetDiagnosticManifest)
   '';
 
