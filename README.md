@@ -58,8 +58,9 @@ nix shell github:zerokaze420/lazycat-cloud-client-flake --impure
 解释器路径 `/lib64/ld-linux-x86-64.so.2`，在 NixOS 上直接运行会报
 `Could not start dynamically linked executable`。
 
-本包启动客户端时会自动修复 `~/.local/share/catlink/*/catlink`，将其
-interpreter 和 RPATH 指向 Nix store 中的 glibc/zlib 以及 GTK 所需的底层图形库。
+本包启动客户端时会自动修复 `~/.local/share/catlink/*/catlink` 和
+`~/.local/share/catlink/*/catlink-core`，将其 interpreter 和 RPATH 指向 Nix
+store 中的 glibc/zlib 以及 GTK 所需的底层图形库。
 也可以手动执行：
 
 ```bash

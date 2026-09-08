@@ -229,7 +229,7 @@ patch_one() {
 
 scan_once() {
   status=0
-  for bin in "$HOME"/.local/share/catlink/*/catlink; do
+  for bin in "$HOME"/.local/share/catlink/*/catlink "$HOME"/.local/share/catlink/*/catlink-core; do
     [ -e "$bin" ] || continue
     patch_one "$bin" || status=1
   done
