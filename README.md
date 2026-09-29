@@ -59,8 +59,9 @@ nix shell github:zerokaze420/lazycat-cloud-client-flake --impure
 `Could not start dynamically linked executable`。
 
 本包启动客户端时会自动修复 `~/.local/share/catlink/*/catlink` 和
-`~/.local/share/catlink/*/catlink-core`，将其 interpreter 和 RPATH 指向 Nix
-store 中的 glibc/zlib 以及 GTK 所需的底层图形库。
+`~/.local/share/catlink/*/catlink-core`。修复器保留上游 ELF 文件，
+生成同名 wrapper，通过 Nix 动态加载器和完整 library path 启动真实程序；
+这样可以兼容新版 Catlink 的 ELF 布局，不会因为直接改写程序头而崩溃。
 也可以手动执行：
 
 ```bash
@@ -69,6 +70,8 @@ lzc-patch-catlink
 
 客户端运行期间会持续监测该目录，因此远程重新下载或替换 `catlink` 后会自动再次修复；
 客户端退出时监测进程也会自动退出。
+由旧版修复器直接改写过的 Catlink 目录会被自动隔离到
+`~/.local/share/catlink-stale/`，随后由客户端重新下载干净版本。
 
 ### NixOS 模块
 
