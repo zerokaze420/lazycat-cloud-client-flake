@@ -207,9 +207,9 @@ patch_one() {
 
   root="$(dirname "$bin")"
   lib_root="$root/lib"
+  runtime_lib_root="$HOME/.local/share/catlink/lib"
   stamp="$root/.nix-patched-catlink"
   target_interp="@glibc@/lib/ld-linux-x86-64.so.2"
-  target_library_path="$lib_root:$lib_root/lib:@glibc@/lib:@zlib@/lib:@wayland@/lib:@libxcb@/lib:@libxkbcommon@/lib:@libglvnd@/lib"
   real="$bin.nix-real"
   marker="# lzc-patch-catlink wrapper"
 
@@ -225,9 +225,21 @@ patch_one() {
   }
 
   expected_stamp() {
-    printf 'interpreter=%s\nlibrary-path=%s\n' "$target_interp" "$target_library_path"
+    printf 'interpreter=%s\nruntime-library-root=%s\n' "$target_interp" "$runtime_lib_root"
     tree_state
   }
+
+  sync_runtime_libs() {
+    [ -d "$lib_root" ] || return 0
+    @coreutils@/bin/mkdir -p "$runtime_lib_root"
+    for bundled_lib in "$lib_root"/*.so*; do
+      [ -f "$bundled_lib" ] || continue
+      name="''${bundled_lib##*/}"
+      @coreutils@/bin/ln -sfn "$bundled_lib" "$runtime_lib_root/$name"
+    done
+  }
+
+  sync_runtime_libs
 
   is_wrapper() {
     [ -f "$1" ] || return 1
@@ -250,7 +262,7 @@ patch_one() {
       IFS= read -r legacy_second_line
     } < "$stamp" 2>/dev/null || true
     case "$legacy_second_line" in
-      rpath=*)
+      rpath=*|entry-rpath=*)
         stale_root="$HOME/.local/share/catlink-stale"
         stale_dir="$stale_root/$(basename "$root").$$"
         @coreutils@/bin/mkdir -p "$stale_root"
@@ -262,38 +274,26 @@ patch_one() {
     esac
   fi
 
-  # Keep the upstream ELF untouched.  Newer Catlink builds have ELF program
-  # headers that old patchelf versions cannot rewrite safely.
+  # Migrate directories patched by the wrapper-based implementation back to
+  # the original ELF before patching its interpreter in place.  Catlink uses
+  # /proc/self/exe to locate catlink-core, so a loader wrapper makes that
+  # lookup point at the glibc store instead of the Catlink directory.
   if is_wrapper "$bin" && [ -f "$real" ]; then
-    source="$real"
-  else
-    source="$bin"
-    if [ -f "$real" ]; then
-      @coreutils@/bin/rm -f "$real"
-    fi
+    @coreutils@/bin/mv -f "$real" "$bin"
+  elif [ -f "$real" ]; then
+    @coreutils@/bin/rm -f "$real"
   fi
 
-  interp="$(@patchelf@/bin/patchelf --print-interpreter "$source" 2>/dev/null || true)"
+  interp="$(@patchelf@/bin/patchelf --print-interpreter "$bin" 2>/dev/null || true)"
   [ -n "$interp" ] || return 0
 
-  if is_wrapper "$bin" \
-    && [ -f "$stamp" ] \
-    && [ "$(cat "$stamp" 2>/dev/null || true)" = "$(expected_stamp)" ]; then
+  if [ "$interp" = "$target_interp" ]; then
     return 0
   fi
 
-  if [ "$source" = "$bin" ]; then
-    @coreutils@/bin/mv "$bin" "$real"
-  fi
-
-  wrapper="$bin.nix-wrapper"
-  if @coreutils@/bin/cat > "$wrapper" <<EOF
-#!/bin/sh
-$marker
-exec "$target_interp" --library-path "$target_library_path" "$real" "\$@"
-EOF
-    @coreutils@/bin/chmod 755 "$wrapper" \
-    && @coreutils@/bin/mv -f "$wrapper" "$bin" \
+  # Only rewrite the interpreter on the two Catlink entrypoints.  Newer
+  # Catlink bootloaders can crash when patchelf changes other ELF headers.
+  if @patchelf@/bin/patchelf --set-interpreter "$target_interp" "$bin" \
     && expected_stamp > "$stamp"; then
     log "patched catlink: $bin"
   else
@@ -331,12 +331,7 @@ PATCHCATLINKEOF
     substituteInPlace $out/bin/lzc-patch-catlink \
       --replace-fail "@patchelf@" "${patchelf}" \
       --replace-fail "@coreutils@" "${coreutils}" \
-      --replace-fail "@glibc@" "${stdenv.cc.libc}" \
-      --replace-fail "@zlib@" "${zlib}" \
-      --replace-fail "@wayland@" "${wayland}" \
-      --replace-fail "@libxcb@" "${libxcb}" \
-      --replace-fail "@libxkbcommon@" "${libxkbcommon}" \
-      --replace-fail "@libglvnd@" "${libglvnd}"
+      --replace-fail "@glibc@" "${stdenv.cc.libc}"
     chmod +x $out/bin/lzc-patch-catlink
 
     makeWrapper $out/lib/lzc-client-desktop/lzc-client-desktop $out/bin/lzc-client-desktop \
@@ -362,6 +357,14 @@ PATCHCATLINKEOF
       --set-default LIBVA_DRIVERS_PATH /run/opengl-driver/lib/dri:${mesa}/lib/dri \
       --set-default __EGL_VENDOR_LIBRARY_DIRS /run/opengl-driver/share/glvnd/egl_vendor.d:${libglvnd}/share/glvnd/egl_vendor.d \
       --set-default ELECTRON_OZONE_PLATFORM_HINT auto \
+      --run 'export LD_LIBRARY_PATH="$HOME/.local/share/catlink/lib:${lib.makeLibraryPath [
+        stdenv.cc.libc
+        zlib
+        wayland
+        libxcb
+        libxkbcommon
+        libglvnd
+      ]}:''${LD_LIBRARY_PATH:-}"' \
       --run "$out/bin/lzc-patch-catlink --quiet || true" \
       --run "$out/bin/lzc-patch-catlink --quiet --watch --watch-pid=\$\$ --watch-interval=0.1 >/dev/null 2>&1 &"
 
