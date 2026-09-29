@@ -67,6 +67,9 @@ store 中的 glibc/zlib 以及 GTK 所需的底层图形库。
 lzc-patch-catlink
 ```
 
+客户端运行期间会持续监测该目录，因此远程重新下载或替换 `catlink` 后会自动再次修复；
+客户端退出时监测进程也会自动退出。
+
 ### NixOS 模块
 
 系统级安装，包含权限管理和可选的 AppArmor 支持。

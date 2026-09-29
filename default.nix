@@ -5,6 +5,7 @@
 , makeWrapper
 , makeDesktopItem
 , copyDesktopItems
+, coreutils
 , patchelf
 , fuse3
 , zstd
@@ -54,11 +55,11 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "lazycat-cloud-client";
-  version = "2.0.25";
+  version = "2.0.26";
 
   src = fetchurl {
     url = "https://dl.lazycat.cloud/client/desktop/stable/lzc-client-desktop_v${finalAttrs.version}.tar.zst";
-    hash = "sha256-5cfGCTXNn7VjFpzKByvfUecgTjZXa3TipVX4r+To+Z8=";
+    hash = "sha256-ZEScHSgEcgnMiRAoawDqkoTXkY9Zti++g6dyKfHfDFw=";
   };
 
   nativeBuildInputs = [
@@ -180,11 +181,13 @@ set -u
 
 quiet=0
 watch=0
-watch_seconds=86400
+watch_pid=""
+watch_seconds=""
 for arg in "$@"; do
   case "$arg" in
     --quiet) quiet=1 ;;
     --watch) watch=1 ;;
+    --watch-pid=*) watch_pid="''${arg#*=}" ;;
     --watch-seconds=*) watch_seconds="''${arg#*=}" ;;
   esac
 done
@@ -206,11 +209,26 @@ patch_one() {
   target_interp="@glibc@/lib/ld-linux-x86-64.so.2"
   target_rpath="$lib_root:$lib_root/lib:@glibc@/lib:@zlib@/lib:@wayland@/lib:@libxcb@/lib:@libxkbcommon@/lib:@libglvnd@/lib"
 
+  tree_state() {
+    find "$root" \( -type f -perm -0100 -o -type f -name '*.so*' \) -print \
+      | LC_ALL=C sort \
+      | while IFS= read -r elf; do
+          rel="''${elf#"$root"/}"
+          printf '%s\t' "$rel"
+          @coreutils@/bin/stat -c '%d:%i:%s:%Y:%y' "$elf" 2>/dev/null || true
+        done
+  }
+
+  expected_stamp() {
+    printf 'interpreter=%s\nrpath=%s\n' "$target_interp" "$target_rpath"
+    tree_state
+  }
+
   interp="$(@patchelf@/bin/patchelf --print-interpreter "$bin" 2>/dev/null || true)"
 
   if [ "$interp" = "$target_interp" ] \
     && [ -f "$stamp" ] \
-    && [ "$(cat "$stamp" 2>/dev/null || true)" = "$target_rpath" ]; then
+    && [ "$(cat "$stamp" 2>/dev/null || true)" = "$(expected_stamp)" ]; then
     return 0
   fi
 
@@ -219,7 +237,7 @@ patch_one() {
       | while IFS= read -r elf; do
           @patchelf@/bin/patchelf --set-rpath "$target_rpath" "$elf" 2>/dev/null || true
         done \
-    && printf '%s' "$target_rpath" > "$stamp"; then
+    && expected_stamp > "$stamp"; then
     log "patched catlink: $bin"
   else
     log "failed to patch catlink: $bin"
@@ -238,8 +256,14 @@ scan_once() {
 
 if [ "$watch" -eq 1 ]; then
   i=0
-  while [ "$i" -lt "$watch_seconds" ]; do
+  while :; do
+    if [ -n "$watch_pid" ] && ! kill -0 "$watch_pid" 2>/dev/null; then
+      exit 0
+    fi
     scan_once || true
+    if [ -n "$watch_seconds" ] && [ "$i" -ge "$watch_seconds" ]; then
+      exit 0
+    fi
     sleep 1
     i=$((i + 1))
   done
@@ -249,6 +273,7 @@ fi
 PATCHCATLINKEOF
     substituteInPlace $out/bin/lzc-patch-catlink \
       --replace-fail "@patchelf@" "${patchelf}" \
+      --replace-fail "@coreutils@" "${coreutils}" \
       --replace-fail "@glibc@" "${stdenv.cc.libc}" \
       --replace-fail "@zlib@" "${zlib}" \
       --replace-fail "@wayland@" "${wayland}" \
@@ -259,7 +284,7 @@ PATCHCATLINKEOF
 
     makeWrapper $out/lib/lzc-client-desktop/lzc-client-desktop $out/bin/lzc-client-desktop \
       --chdir "$out/lib/lzc-client-desktop" \
-      --prefix PATH : ${lib.makeBinPath [ fuse3 libnotify xdg-utils zstd ]} \
+      --prefix PATH : ${lib.makeBinPath [ coreutils fuse3 libnotify xdg-utils zstd ]} \
       --prefix PATH : /run/wrappers/bin \
       --prefix PATH : $out/lib/lzc-client-desktop/fake/bin \
       --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [
@@ -281,7 +306,7 @@ PATCHCATLINKEOF
       --set-default __EGL_VENDOR_LIBRARY_DIRS /run/opengl-driver/share/glvnd/egl_vendor.d:${libglvnd}/share/glvnd/egl_vendor.d \
       --set-default ELECTRON_OZONE_PLATFORM_HINT auto \
       --run "$out/bin/lzc-patch-catlink --quiet || true" \
-      --run "$out/bin/lzc-patch-catlink --quiet --watch --watch-seconds=86400 >/dev/null 2>&1 &"
+      --run "$out/bin/lzc-patch-catlink --quiet --watch --watch-pid=\$\$ >/dev/null 2>&1 &"
 
     runHook postInstall
   '';
