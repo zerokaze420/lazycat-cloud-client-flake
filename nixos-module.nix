@@ -35,7 +35,6 @@ in
 
     environment.systemPackages = [
       cfg.package
-      pkgs.zenity
     ];
 
     security.wrappers.lzc-core = {

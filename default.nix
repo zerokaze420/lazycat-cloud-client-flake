@@ -39,6 +39,8 @@
 , e2fsprogs
 , wayland
 , vulkan-loader
+, xkeyboard-config
+, zenity
 , xdg-utils
 , libx11
 , libxcomposite
@@ -55,11 +57,11 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "lazycat-cloud-client";
-  version = "2.0.26";
+  version = "2.0.28";
 
   src = fetchurl {
     url = "https://dl.lazycat.cloud/client/desktop/stable/lzc-client-desktop_v${finalAttrs.version}.tar.zst";
-    hash = "sha256-ZEScHSgEcgnMiRAoawDqkoTXkY9Zti++g6dyKfHfDFw=";
+    hash = "sha256-rFAeW2Dd2PxsMe1Qp/0RjYQo1ABVpN21qItUbiodOjE=";
   };
 
   nativeBuildInputs = [
@@ -336,7 +338,7 @@ PATCHCATLINKEOF
 
     makeWrapper $out/lib/lzc-client-desktop/lzc-client-desktop $out/bin/lzc-client-desktop \
       --chdir "$out/lib/lzc-client-desktop" \
-      --prefix PATH : ${lib.makeBinPath [ coreutils fuse3 libnotify xdg-utils zstd ]} \
+      --prefix PATH : ${lib.makeBinPath [ coreutils fuse3 libnotify xdg-utils zstd zenity ]} \
       --prefix PATH : /run/wrappers/bin \
       --prefix PATH : $out/lib/lzc-client-desktop/fake/bin \
       --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [
@@ -357,6 +359,10 @@ PATCHCATLINKEOF
       --set-default LIBVA_DRIVERS_PATH /run/opengl-driver/lib/dri:${mesa}/lib/dri \
       --set-default __EGL_VENDOR_LIBRARY_DIRS /run/opengl-driver/share/glvnd/egl_vendor.d:${libglvnd}/share/glvnd/egl_vendor.d \
       --set-default ELECTRON_OZONE_PLATFORM_HINT auto \
+      --set-default XKB_CONFIG_ROOT ${xkeyboard-config}/share/X11/xkb \
+      --set-default DBUS_SYSTEM_BUS_ADDRESS unix:path=/run/dbus/system_bus_socket \
+      --set-default FONTCONFIG_FILE ${fontconfig.out}/etc/fonts/fonts.conf \
+      --run 'if [ -z "''${DBUS_SESSION_BUS_ADDRESS:-}" ] && [ -n "''${XDG_RUNTIME_DIR:-}" ]; then export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"; fi' \
       --run 'export LD_LIBRARY_PATH="$HOME/.local/share/catlink/lib:${lib.makeLibraryPath [
         stdenv.cc.libc
         zlib
