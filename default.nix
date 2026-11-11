@@ -21,6 +21,7 @@
 , freetype
 , gdk-pixbuf
 , glib
+, libgpg-error
 , gtk3
 , libGL
 , libdrm
@@ -91,6 +92,7 @@ stdenv.mkDerivation (finalAttrs: {
     freetype
     gdk-pixbuf
     glib
+    libgpg-error
     gtk3
     libGL
     libdrm
@@ -298,6 +300,11 @@ PREPARECATLINKEOF
   '';
 
   preFixup = ''
+    # autoPatchelf sets the interpreter before the RPATH.  With patchelf
+    # 0.19.2 this produces an invalid LOAD layout for the upstream Go ELF.
+    # Patch this executable separately, in the working order, after fixup.
+    mv "$out/lib/lzc-client-desktop/core/.lzc-core-wrapped" "$TMPDIR/lzc-core-unpatched"
+
     # autoPatchelf sees the player's bundled libraries and may add that
     # directory to unrelated executables.  In particular, its older GLib
     # must not be mixed with nixpkgs' GObject/GIO used by Electron.
@@ -380,9 +387,30 @@ PREPARECATLINKEOF
       fi
     }
 
+    patchCore() {
+      local core="$out/lib/lzc-client-desktop/core/.lzc-core-wrapped"
+      mv "$TMPDIR/lzc-core-unpatched" "$core"
+      ${patchelf}/bin/patchelf --set-rpath "${lib.makeLibraryPath [
+        gtk3
+        pango
+        at-spi2-atk
+        cairo
+        gdk-pixbuf
+        glib
+      ]}" "$core"
+      ${patchelf}/bin/patchelf --set-interpreter "${stdenv.cc.bintools.dynamicLinker}" "$core"
+    }
+
     postFixupHooks+=(removePlayerRpath)
     postFixupHooks+=(ensureGlibRpath)
     postFixupHooks+=(updateNetDiagnosticManifest)
+    postFixupHooks+=(patchCore)
+  '';
+
+  doInstallCheck = true;
+  installCheckPhase = ''
+    coreUsage="$("$out/lib/lzc-client-desktop/core/.lzc-core-wrapped" -h 2>&1)"
+    grep -q '^Usage of ' <<< "$coreUsage"
   '';
 
   desktopItems = [
