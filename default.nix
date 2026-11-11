@@ -59,11 +59,11 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "lazycat-cloud-client";
-  version = "2.0.30";
+  version = "2.1.1";
 
   src = fetchurl {
     url = "https://dl.lazycat.cloud/client/desktop/stable/lzc-client-desktop_v${finalAttrs.version}.tar.zst";
-    hash = "sha256-ShoUvXPEH9WSUO+dd9pd/K13NQGcaov+6FG6QJCJDQA=";
+    hash = "sha256-M3yVOnNLESQyhLwdU0o6I4kvhNuCxzOmr1iY1yIEgv0=";
   };
 
   nativeBuildInputs = [
