@@ -35,8 +35,10 @@
 , mesa
 , nspr
 , nss
+, openssl
 , pango
 , pipewire
+, libpulseaudio
 , systemd
 , e2fsprogs
 , wayland
@@ -55,15 +57,16 @@
 , libxrender
 , libxcb
 , libxshmfence
+, libxtst
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "lazycat-cloud-client";
-  version = "2.1.3";
+  version = "2.1.4-1";
 
   src = fetchurl {
     url = "https://dl.lazycat.cloud/client/desktop/stable/lzc-client-desktop_v${finalAttrs.version}.tar.zst";
-    hash = "sha256-p3+GfPfgppXOmmBetyUF2M75qTa4f6x/Wjr6COPLDLU=";
+    hash = "sha256-vpVLmLeKMmXMG00QKyPSrLneWP/LgKqZFuB1CWHdyv4=";
   };
 
   nativeBuildInputs = [
@@ -258,6 +261,9 @@ PREPARECATLINKEOF
     chmod +x $out/bin/lzc-prepare-catlink
     ln -s lzc-prepare-catlink $out/bin/lzc-patch-catlink
 
+    # The managed remote desktop binary is downloaded after installation.
+    # Its --version check runs outside autoPatchelf, using nix-ld and this
+    # inherited library path.
     makeWrapper $out/lib/lzc-client-desktop/lzc-client-desktop $out/bin/lzc-client-desktop \
       --chdir "$out/lib/lzc-client-desktop" \
       --prefix PATH : ${lib.makeBinPath [ coreutils fuse3 libnotify xdg-utils zstd zenity ]} \
@@ -288,11 +294,36 @@ PREPARECATLINKEOF
       --set-default NIX_LD ${stdenv.cc.bintools.dynamicLinker} \
       --run 'export NIX_LD_LIBRARY_PATH="${lib.makeLibraryPath [
         stdenv.cc.libc
+        stdenv.cc.cc.lib
         zlib
+        openssl
         wayland
         libxcb
         libxkbcommon
         libglvnd
+        libx11
+        libxi
+        libxfixes
+        libxdamage
+        libxrandr
+        libxtst
+        dbus
+        alsa-lib
+        libpulseaudio
+        pipewire
+        libGL
+        libdrm
+        mesa
+        glib
+        gtk3
+        cairo
+        pango
+        at-spi2-atk
+        gdk-pixbuf
+        fontconfig
+        freetype
+        libva
+        libvdpau
       ]}:''${NIX_LD_LIBRARY_PATH:-}"' \
       --run "$out/bin/lzc-prepare-catlink --quiet || true"
 

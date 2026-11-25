@@ -72,6 +72,12 @@ lzc-prepare-catlink
 被自动隔离到 `~/.local/share/catlink-stale/`，随后由客户端重新下载干净版本。
 兼容命令名 `lzc-patch-catlink` 仍然保留，但不会修改 ELF。
 
+蓝猫远程桌面会把运行时二进制下载到
+`~/.config/lzc-client-desktop/remote-desktop/managed/`，并在安装时执行
+`--version` 校验。NixOS 模块通过 `nix-ld` 提供动态链接器，客户端启动脚本
+则把远程桌面所需的图形、音频和系统库加入 `NIX_LD_LIBRARY_PATH`，让下载的
+二进制保持原样运行。
+
 ### NixOS 模块
 
 系统级安装，包含权限管理和可选的 AppArmor 支持。

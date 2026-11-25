@@ -48,18 +48,41 @@ in
       userAllowOther = true;
     };
 
-    # Catlink is downloaded at runtime and uses the conventional
-    # /lib64/ld-linux-x86-64.so.2 interpreter.  nix-ld runs the pristine ELF
-    # without rewriting its program headers or changing /proc/self/exe.
+    # Catlink and the managed remote desktop runtime are downloaded at runtime.
+    # nix-ld runs their pristine ELF files without changing /proc/self/exe.
     programs.nix-ld = {
       enable = true;
       libraries = with pkgs; [
         stdenv.cc.cc
         zlib
+        openssl
         wayland
         libxcb
         libxkbcommon
         libglvnd
+        libx11
+        libxi
+        libxfixes
+        libxdamage
+        libxrandr
+        libxtst
+        dbus
+        alsa-lib
+        libpulseaudio
+        pipewire
+        libGL
+        libdrm
+        mesa
+        glib
+        gtk3
+        cairo
+        pango
+        at-spi2-atk
+        gdk-pixbuf
+        fontconfig
+        freetype
+        libva
+        libvdpau
       ];
     };
 
